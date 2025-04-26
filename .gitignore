@@ -1,0 +1,8 @@
+**/__pycache__/
+*.png
+*.mp4
+list.txt
+smpl_lib/body_models*
+
+# Ignore Git files
+.git/

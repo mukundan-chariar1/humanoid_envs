@@ -1,1 +1,1 @@
-# Humanoid environments for Biomechanics
+# Humanoid environments for Biomechanics RL
