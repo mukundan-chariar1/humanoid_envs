@@ -3,6 +3,9 @@
 *.mp4
 list.txt
 smpl_lib/body_models*
+test_data*
+install.ipynb
+MUJOCO_LOG.TXT
 
 # Ignore Git files
 .git/
