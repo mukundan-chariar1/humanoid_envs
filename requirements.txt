@@ -1,0 +1,13 @@
+mujoco
+torch==2.4
+torchvision
+PyOpenGL==3.1.6
+opencv-contrib-python
+smplx
+human_body_prior
+imageio[ffmpeg]
+
+--find-links https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt240/pytorch3d-0.7.8-cp310-cp310-linux_x86_64.whl
+pytorch3d
+
+git+https://github.com/mattloper/chumpy
