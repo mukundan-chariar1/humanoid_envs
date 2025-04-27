@@ -42,24 +42,19 @@ def get_traj_from_pkl():
     return rot, ang, transl, transl
 
 def get_traj_from_wham():
-    results=joblib.load('test_data/drone_video/wham_output_modified.pkl')
+    results=joblib.load('test_data/drone_video/wham_output.pkl')
 
-    pose=results[0]['smpl_pose'].reshape((-1, 24, 3))
+    pose=results[0]['body_pose']
     transl=results[0]['trans_world']
-    fps=30
+    fps=np.ceil(results[0]['fps'])
 
     rot=upsample_signal_cubic(pose.copy(), original_dt=1/fps)
     ang=upsample_signal_cubic(pose.copy(), original_dt=1/fps)
-    ang=np.concatenate(((ang[1:]-ang[:-1])/fps, np.zeros((1, 24, 3))), axis=0)
+    ang=np.concatenate(((ang[1:]-ang[:-1])/fps, np.zeros((1, 69))), axis=0)
     transl=upsample_signal_cubic(transl.copy(), original_dt=1/fps)
     transl=np.column_stack([transl[:, 0], transl[:, 2], np.full(transl.shape[0], transl[:, 1].mean())])
     vel=np.concatenate(((transl[1:]-transl[:-1])/fps, np.zeros((1, 3))), axis=0)
 
-    rot=rot[:, _C.SMPL.NUMERICAL][:, :, [1, 2, 0]]
-    ang=ang[:, _C.SMPL.NUMERICAL][:, :, [1, 2, 0]]
-
-    rot[:, :, 1]*=-1
-    ang[:, :, 1]*=-1
     return rot, ang, transl, vel
 
 def plot_3d_trajectory(points, title="3D Trajectory", xlabel="X", ylabel="Y", zlabel="Z", show=True, save_path=None):

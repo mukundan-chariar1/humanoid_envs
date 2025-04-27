@@ -33,7 +33,7 @@ class Renderer():
         self.faces = torch.from_numpy((faces).astype('int')).to(device)
         self.device = device
         self.color = (0.9, 0.9, 0.9)
-        self.lights = PointLights(device=device, location=[[0.0, 0.0, -10.0]])
+        self.lights = PointLights(device=device, location=[[-10.0, 0.0, -3.0]])
 
         if camera is not None:
             self.renderer = MeshRenderer(

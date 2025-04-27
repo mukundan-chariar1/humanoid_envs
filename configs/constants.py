@@ -65,6 +65,37 @@ class CHILDREN:
           [24],
           [-1],]
     
+class ROBOT:
+    BODIES = ['Pelvis', 'L_Hip', 'L_Knee', 'L_Ankle', 'L_Toe', 'R_Hip', 'R_Knee', 'R_Ankle', 'R_Toe', 'Torso', 'Spine', 'Chest', 'Neck', 'Head', 'L_Thorax', 'L_Shoulder', 'L_Elbow', 'L_Wrist', 'L_Hand', 'R_Thorax', 'R_Shoulder', 'R_Elbow', 'R_Wrist', 'R_Hand']
+
+    FROM_SMPL_MAP={
+                    0 : 8, 1 : 9, 2 : 7,
+                    3 : 20, 4 : 21, 5 : 19,
+                    6 : 32, 7 : 33, 8 : 31,
+                    9 : 11, 10 : 12, 11 : 10,
+                    12 : 23, 13 : 24, 14 : 22,
+                    15 : 35, 16 : 36, 17 : 34,
+                    18 : 14, 19 : 15, 20 : 13,
+                    21 : 26, 22 : 27, 23 : 25,
+                    24 : 38, 25 : 39, 26 : 37,
+                    27 : 17, 28 : 18, 29 : 16,
+                    30 : 29, 31 : 30, 32 : 28,
+                    33 : 41, 34 : 42, 35 : 40,
+                    36 : 47, 37 : 48, 38 : 46,
+                    39 : 62, 40 : 63, 41 : 61,
+                    42 : 44, 43 : 45, 44 : 43,
+                    45 : 50, 46 : 51, 47 : 49,
+                    48 : 65, 49 : 66, 50 : 64,
+                    51 : 53, 52 : 54, 53 : 52,
+                    54 : 68, 55 : 69, 56 : 67,
+                    57 : 56, 58 : 57, 59 : 55,
+                    60 : 71, 61 : 72, 62 : 70,
+                    63 : 59, 64 : 60, 65 : 58,
+                    66 : 74, 67 : 75, 68 : 73
+                    }
+    
+    REVERSE_MAPPING = {v: k for k, v in sorted(FROM_SMPL_MAP.items(), key=lambda x: x[1])}
+    
 class SMPL:
     JOINTS = [
         'Pelvis', 'Left Hip', 'Right Hip', 'Spine 1 (Lower)', 'Left Knee',
@@ -105,6 +136,8 @@ class SMPL:
     REVERSE_MAPPING = {v: k for k, v in NAME_MAPPING.items()}
 
     NUMERICAL=[0, 1, 5, 9, 2, 6, 10, 3, 7, 11, 4, 8, 12, 14, 19, 13, 15, 20, 16, 21, 17, 22, 18, 23]
+
+    TO_ROBOT_MAPPING={}
 
 class CAMERAS:
     FOCAL_LENGTH = 421.2

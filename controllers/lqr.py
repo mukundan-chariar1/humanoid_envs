@@ -6,11 +6,15 @@ from functools import partial
 import numpy as np
 from scipy.linalg import solve_discrete_are
 
+import cv2
+
 import functools
 
 from utils.load_traj import get_traj_from_wham, get_traj_from_pkl
 from envs.smpl import *
 from utils.utils import *
+from utils.transforms import *
+from utils.viz import Renderer
 
 import mujoco
 
@@ -68,21 +72,14 @@ def ihlqr(A: np.array,
 if __name__ == '__main__':
     env = SMPL()
     state = env.reset()
+    env_renderer=Renderer(env)
 
-    # rot, ang, transl, vel=get_traj_from_wham()
-    rot, ang, transl, vel=get_traj_from_pkl()
+    rot, ang, transl_, vel=get_traj_from_wham()
 
-    root_rot=axis_angle_to_quaternion(rot[:, 0])
-    # root_rot=axis_angle_to_quaternion(rot[:, 0]-np.array([0, np.pi/2, 0]))
-    # root_rot=axis_angle_to_quaternion(np.zeros_like(rot[:, 0]))
-    rot=np.concatenate((root_rot, rot[:, 1:].reshape(root_rot.shape[0], -1)), axis=-1)
-    # rot=np.concatenate((root_rot, np.zeros_like(rot[:, 1:].reshape(root_rot.shape[0], -1))), axis=-1)
-
-    ang=ang.reshape(root_rot.shape[0], -1)
-    transl=transl+env.initial_pose[:3]
-
-    # ang=np.zeros_like(ang.reshape(root_rot.shape[0], -1))
-    # transl=np.zeros_like(transl)+env.initial_pose[:3]
+    root_rot=axis_angle_to_quaternion(np.zeros((rot.shape[0], 3)))
+    rot=np.concatenate((root_rot, rot[:, list(_C.ROBOT.REVERSE_MAPPING.values())]), axis=-1)
+    ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), ang), axis=-1)
+    transl=transl_+env.initial_pose[:3]
 
     q_ref=np.concatenate((transl, rot), axis=-1)
     qd_ref=np.concatenate((vel, ang), axis=-1)
@@ -93,7 +90,7 @@ if __name__ == '__main__':
 
     nv=env.model.nv
     nu = env.model.nu  # Alias for the number of actuators.
-    R = np.eye(nu)
+    R = np.eye(nu)*10
 
     Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
               [np.zeros((nv, 2*nv))]])
@@ -118,4 +115,4 @@ if __name__ == '__main__':
         if len(actions)==100:
             break
     
-    render_env(env, act=act, qpos=q_ref[0], qvel=qd_ref[0])
+    env_renderer.render_env(act=act, qpos=q_ref[0], qvel=qd_ref[0])
