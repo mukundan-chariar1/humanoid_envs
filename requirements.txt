@@ -8,6 +8,7 @@ human_body_prior
 imageio[ffmpeg]
 joblib
 matplotlib
+sympy
 
 --find-links https://dl.fbaipublicfiles.com/pytorch3d/packaging/wheels/py310_cu121_pyt240/pytorch3d-0.7.8-cp310-cp310-linux_x86_64.whl
 pytorch3d

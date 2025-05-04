@@ -6,6 +6,8 @@ import numpy as np
 from typing import Dict, Any, Optional, Tuple
 
 from utils.viz import *
+from utils.utils import *
+from controllers.pid import *
 
 class SMPL(Env):
     """MuJoCo environment for SMPL human model."""
@@ -17,6 +19,10 @@ class SMPL(Env):
         self.model = mujoco.MjModel.from_xml_path(self.xml_path)
         self.data = mujoco.MjData(self.model)
 
+        import pdb; pdb.set_trace()
+
+        
+
         # SMPL-specific parameters
         self.body_names = self._get_body_names()
         self.joint_names = self._get_joint_names()
@@ -25,6 +31,12 @@ class SMPL(Env):
 
         self.num_simulation_step_per_control_step=num_simulation_step_per_control_step
         self.dt=num_simulation_step_per_control_step*self.model.opt.timestep
+
+        self.qpos_lim = np.max(self.model.jnt_qposadr) + self.model.jnt_qposadr[-1] - self.model.jnt_qposadr[-2]
+        self.qvel_lim = np.max(self.model.jnt_dofadr) + self.model.jnt_dofadr[-1] - self.model.jnt_dofadr[-2]
+
+        self.dof_size = len(self.body_names[2:]) * 3
+        self.controller=setup_controller(self)
         
     def _get_body_names(self) -> list:
         """Extract all body names from the model."""
@@ -45,6 +57,12 @@ class SMPL(Env):
     def _get_body_positions(self) -> Dict[str, np.ndarray]:
         """Get current positions of all bodies."""
         return {name: self.data.body(name).xpos.copy() for name in self.body_names}
+    
+    def compute_torque(self, ctrl):
+        ctrl_joint = ctrl[:self.dof_size]
+        torque = self.controller.control(ctrl_joint, self.model, self.data)
+
+        return torque
     
     def reset(self, 
               qpos: Optional[np.array] = None, 
@@ -67,11 +85,12 @@ class SMPL(Env):
         }
     
     def step(self, action: np.ndarray) -> Tuple[Dict, float, bool, Dict]:
-        # Apply control (direct joint position control for SMPL)
-        self.data.ctrl[:] = action
-        
         # Step the simulation
-        for i in range(self.num_simulation_step_per_control_step): mujoco.mj_step(self.model, self.data)
+        for i in range(self.num_simulation_step_per_control_step): 
+            # torque = self.compute_torque(action)
+            # self.data.ctrl[:]=torque
+            self.data.ctrl[:]=action
+            mujoco.mj_step(self.model, self.data)
         
         # Get new state
         obs = {

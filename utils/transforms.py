@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+from pytorch3d import transforms
 from typing import Tuple
 
 def quaternion_to_matrix(quaternions: np.array) -> np.array:
@@ -74,9 +76,33 @@ def quaternion_to_axis_angle(quaternion: np.ndarray) -> np.ndarray:
 
     # Compute the axis
     norm_xyz = np.linalg.norm(xyz, axis=-1, keepdims=True)
-    axis = np.where(norm_xyz > 1e-8, xyz / norm_xyz, np.array([1.0, 0.0, 0.0]))
+    axis = np.where(norm_xyz > 1e-8, xyz / (norm_xyz+1e-8), np.array([1.0, 0.0, 0.0]))
 
     # Combine axis and angle into axis-angle representation
     axis_angle = axis * angle[..., None]
 
     return axis_angle
+
+def convert_to_qpos_quat(qpos_aa: np.array) -> np.array:
+    return np.concatenate([qpos_aa[:3], axis_angle_to_quaternion(qpos_aa[3:6]), qpos_aa[6:]])
+
+def convert_to_qpos_aa(qpos_quat: np.array) -> np.array:
+    return np.concatenate([qpos_quat[:3], quaternion_to_axis_angle(qpos_quat[3:7]), qpos_quat[7:]])
+
+def convert_to_x_quat(x_aa: np.array) -> np.array:
+    return np.concatenate([convert_to_qpos_quat(x_aa[:x_aa.shape[0]//2+1]), x_aa[x_aa.shape[0]//2+1:]])
+
+def convert_to_x_aa(x_quat: np.array) -> np.array:
+    return np.concatenate([convert_to_qpos_aa(x_quat[:x_quat.shape[0]//2]), x_quat[x_quat.shape[0]//2:]])
+
+def convert_to_qpos_quat_torch(qpos_aa: torch.tensor) -> torch.tensor:
+    return torch.cat([qpos_aa[:3], transforms.axis_angle_to_quaternion(qpos_aa[3:6]), qpos_aa[6:]])
+
+def convert_to_qpos_aa_torch(qpos_quat: torch.tensor) -> torch.tensor:
+    return torch.cat([qpos_quat[:3], transforms.quaternion_to_axis_angle(qpos_quat[3:7]), qpos_quat[7:]])
+
+def convert_to_x_quat_torch(x_aa: torch.tensor) -> torch.tensor:
+    return torch.cat([convert_to_qpos_quat_torch(x_aa[:x_aa.shape[0]//2+1]), x_aa[x_aa.shape[0]//2+1:]])
+
+def convert_to_x_aa_torch(x_quat: torch.tensor) -> torch.tensor:
+    return torch.cat([convert_to_qpos_aa_torch(x_quat[:x_quat.shape[0]//2]), x_quat[x_quat.shape[0]//2:]])

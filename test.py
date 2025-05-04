@@ -17,23 +17,24 @@ from envs.smpl import SMPL
 from utils.viz import Renderer as EnvRenderer
 
 from utils.load_traj import get_traj_from_wham
+from utils.transforms import *
 
 from pytorch3d import transforms
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-pose, transl=get_traj_from_wham()
+rot, ang, transl, vel, root_rot, root_ang=get_traj_from_wham()
 
 smpl = build_smpl_model(device, model_type='smpl', use_vposer=False)
 
 with torch.no_grad():
-    pose_params = torch.from_numpy(pose[100:101]).to(device) # 23 joints * 3 (SMPL standard)
+    pose_params = torch.from_numpy(rot[0:1]).to(device) # 23 joints * 3 (SMPL standard)
     
     pose_params_r6d=transforms.matrix_to_rotation_6d(transforms.axis_angle_to_matrix(pose_params.reshape(1, -1, 3)))
 
     smpl.pose_embedding.index_copy_(
                 0, torch.LongTensor(range(len(smpl.pose_embedding))
-            ).to(device), pose_params_r6d.to(device))
+            ).to(device), pose_params_r6d.float().to(device))
 
 output = smpl(return_verts=True)
 vertices = output.vertices[0]
@@ -50,6 +51,7 @@ print(f"Image saved to smpl_output.png")
 env=SMPL()
 
 qpos=env.initial_pose.copy()
+qpos[3:7]=axis_angle_to_quaternion(root_rot[200])
 qpos[list(_C.ROBOT.FROM_SMPL_MAP.values())]=pose_params.cpu().numpy().squeeze()
 _=env.reset()
 env_renderer=EnvRenderer(env)

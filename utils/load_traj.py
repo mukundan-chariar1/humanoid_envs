@@ -13,7 +13,7 @@ from scipy.interpolate import CubicSpline
 
 from pdb import set_trace as st
 
-def upsample_signal_cubic(original_signal, original_dt=1/40, upsampled_dt=0.003*5):
+def upsample_signal_cubic(original_signal, original_dt=1/40, upsampled_dt=0.003):
     original_time = np.arange(0, len(original_signal) * original_dt, original_dt)
     upsampled_time = np.arange(0, original_time[-1], upsampled_dt)
     cubic_spline = CubicSpline(original_time, original_signal)
@@ -41,21 +41,28 @@ def get_traj_from_pkl():
 
     return rot, ang, transl, transl
 
-def get_traj_from_wham():
+def get_traj_from_wham(dt=0.003*5):
     results=joblib.load('test_data/drone_video/wham_output.pkl')
 
     pose=results[0]['body_pose']
     transl=results[0]['trans_world']
     fps=np.ceil(results[0]['fps'])
 
-    rot=upsample_signal_cubic(pose.copy(), original_dt=1/fps)
-    ang=upsample_signal_cubic(pose.copy(), original_dt=1/fps)
+    root_rot=results[0]['pose_world'][:, :3]
+    root_rot=upsample_signal_cubic(root_rot.copy(), original_dt=1/fps, upsampled_dt=dt)[:, [2, 0, 1]]
+    root_ang=root_rot.copy()
+    root_ang=np.concatenate(((root_ang[1:]-root_ang[:-1])/fps, np.zeros((1, 3))), axis=0)
+    
+    rot=upsample_signal_cubic(pose.copy(), original_dt=1/fps, upsampled_dt=dt)
+    ang=upsample_signal_cubic(pose.copy(), original_dt=1/fps, upsampled_dt=dt)
     ang=np.concatenate(((ang[1:]-ang[:-1])/fps, np.zeros((1, 69))), axis=0)
-    transl=upsample_signal_cubic(transl.copy(), original_dt=1/fps)
-    transl=np.column_stack([transl[:, 0], transl[:, 2], np.full(transl.shape[0], transl[:, 1].mean())])
+    transl=upsample_signal_cubic(transl.copy(), original_dt=1/fps, upsampled_dt=dt)[:, [2, 0, 1]]
+    # transl=np.column_stack([transl[:, 2], transl[:, 0], np.full(transl.shape[0], transl[:, 1].mean())])
+    transl[:, 0]=np.linspace(0, 12, transl.shape[0])
+    transl[:, 1]=0
     vel=np.concatenate(((transl[1:]-transl[:-1])/fps, np.zeros((1, 3))), axis=0)
 
-    return rot, ang, transl, vel
+    return rot, ang, transl, vel, root_rot, root_ang
 
 def plot_3d_trajectory(points, title="3D Trajectory", xlabel="X", ylabel="Y", zlabel="Z", show=True, save_path=None):
     points = np.asarray(points)

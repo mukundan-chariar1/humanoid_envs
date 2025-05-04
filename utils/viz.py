@@ -107,6 +107,10 @@ class Renderer():
                    qvel: Optional[np.array] = None) -> None:
         _=self.env.reset(qpos=qpos, qvel=qvel)
 
+        import pdb; pdb.set_trace()
+
+        
+
         with imageio.get_writer(output_path, fps=self.fps) as writer:
             for i, action in enumerate(act):
                 self.env.step(action)

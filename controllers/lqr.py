@@ -10,7 +10,7 @@ import cv2
 
 import functools
 
-from utils.load_traj import get_traj_from_wham, get_traj_from_pkl
+from utils.load_traj import get_traj_from_wham
 from envs.smpl import *
 from utils.utils import *
 from utils.transforms import *
@@ -69,7 +69,7 @@ def ihlqr(A: np.array,
 
         P = P_new
 
-if __name__ == '__main__':
+def main():
     env = SMPL()
     state = env.reset()
     env_renderer=Renderer(env)
@@ -77,8 +77,8 @@ if __name__ == '__main__':
     rot, ang, transl_, vel=get_traj_from_wham()
 
     root_rot=axis_angle_to_quaternion(np.zeros((rot.shape[0], 3)))
-    rot=np.concatenate((root_rot, rot[:, list(_C.ROBOT.REVERSE_MAPPING.values())]), axis=-1)
-    ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), ang), axis=-1)
+    rot=np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
+    ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), smpl_to_robot(ang)), axis=-1)
     transl=transl_+env.initial_pose[:3]
 
     q_ref=np.concatenate((transl, rot), axis=-1)
@@ -97,7 +97,55 @@ if __name__ == '__main__':
     
     # Example: Randomly wiggle joints
     actions=[]
-    for q, qd in zip(q_ref, qd_ref):
+    for q, qd in zip(q_ref[1:], qd_ref[1:]):
+        print(len(actions))
+        mujoco.mj_differentiatePos(env.model, dq, 1, q, env.data.qpos)
+        dx = np.hstack((dq, env.data.qvel-qd)).T
+
+        A, B=linearize_dynamics(env)
+
+        P = solve_discrete_are(A, B, Q, R)
+        K = np.linalg.inv(R + B.T @ P @ B) @ B.T @ P @ A
+
+        act=- K @ dx
+
+        actions.append(act)
+        env.step(act)
+
+        if len(actions)==100:
+            break
+    
+    env_renderer.render_env(act=act, qpos=q_ref[0], qvel=qd_ref[0])
+
+if __name__ == '__main__':
+    env = SMPL()
+    state = env.reset()
+    env_renderer=Renderer(env)
+
+    rot, ang, transl_, vel=get_traj_from_wham()
+
+    root_rot=axis_angle_to_quaternion(np.zeros((rot.shape[0], 3)))
+    rot=np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
+    ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), smpl_to_robot(ang)), axis=-1)
+    transl=transl_+env.initial_pose[:3]
+
+    q_ref=np.concatenate((transl, rot), axis=-1)
+    qd_ref=np.concatenate((vel, ang), axis=-1)
+
+    state=env.reset(qpos=q_ref[0], qvel=qd_ref[0])
+
+    dq = np.zeros(env.model.nv)
+
+    nv=env.model.nv
+    nu = env.model.nu  # Alias for the number of actuators.
+    R = np.eye(nu)*10
+
+    Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
+              [np.zeros((nv, 2*nv))]])
+    
+    # Example: Randomly wiggle joints
+    actions=[]
+    for q, qd in zip(q_ref[1:], qd_ref[1:]):
         print(len(actions))
         mujoco.mj_differentiatePos(env.model, dq, 1, q, env.data.qpos)
         dx = np.hstack((dq, env.data.qvel-qd)).T
