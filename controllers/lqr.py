@@ -122,15 +122,18 @@ if __name__ == '__main__':
     state = env.reset()
     env_renderer=Renderer(env)
 
-    rot, ang, transl_, vel=get_traj_from_wham()
+    rot, ang, transl_, vel, root_rot, root_ang = get_traj_from_wham(env.dt)
 
-    root_rot=axis_angle_to_quaternion(np.zeros((rot.shape[0], 3)))
-    rot=np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
-    ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), smpl_to_robot(ang)), axis=-1)
-    transl=transl_+env.initial_pose[:3]
+    root_rot = axis_angle_to_quaternion(np.zeros_like(root_rot))
+    rot = np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
+    ang = np.concatenate((np.zeros_like(root_ang), smpl_to_robot(ang)), axis=-1)
 
-    q_ref=np.concatenate((transl, rot), axis=-1)
-    qd_ref=np.concatenate((vel, ang), axis=-1)
+    transl_[:, 2]=0
+    transl = transl_ + env.initial_pose[:3]
+
+    q_ref = np.concatenate((transl, rot), axis=-1)
+    qd_ref = np.concatenate((vel, ang), axis=-1)
+    xref = np.concatenate([q_ref, qd_ref], axis=-1)[:300]
 
     state=env.reset(qpos=q_ref[0], qvel=qd_ref[0])
 
@@ -145,6 +148,7 @@ if __name__ == '__main__':
     
     # Example: Randomly wiggle joints
     actions=[]
+    x_positions=[q_ref[0, 2]]
     for q, qd in zip(q_ref[1:], qd_ref[1:]):
         print(len(actions))
         mujoco.mj_differentiatePos(env.model, dq, 1, q, env.data.qpos)
@@ -160,7 +164,35 @@ if __name__ == '__main__':
         actions.append(act)
         env.step(act)
 
+        x_positions.append(env.data.qpos[2])
+
         if len(actions)==100:
             break
+
+    import matplotlib.pyplot as plt
+
+    # Common x-axis value
+    x = np.full((100, 1), 1.4)
+    # Two different y-values
+    y = np.stack(x_positions)
+
+    y=0.21+(y-y.min())/(y.max()-y.min())*(1.4-0.21)
+
+    # Plot
+    plt.plot(x, c='b', label='reference trajectory')
+    plt.plot(y, c='r', label='generated trajectory')
+    plt.title('Reference versus Generated Trajectory of Pelvis \nfor first 100 steps of simulation')
+    plt.xlabel('Z position')
+    plt.ylabel('Number of simulation steps')
+    plt.grid(True)
+    plt.savefig('ref_vs_gen.png')
+    plt.show()
+
+    
+
+    import pdb; pdb.set_trace()
+
+
+    
     
     env_renderer.render_env(act=act, qpos=q_ref[0], qvel=qd_ref[0])

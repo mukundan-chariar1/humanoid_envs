@@ -1,20 +1,11 @@
 import torch
 import torch.nn as nn
 
+import abc
+from typing import Any, Dict, Tuple, Optional
+
 class BaseDynamics(nn.Module):
-    """
-    Base class for dynamics models in PyTorch.
-    All specific dynamics implementations should inherit from this class.
-    """
     def __init__(self, state_dim, action_dim, dt=0.01):
-        """
-        Initialize the base dynamics model.
-        
-        Args:
-            state_dim (int): Dimension of the state space
-            action_dim (int): Dimension of the action/control space
-            dt (float): Time step for the dynamics
-        """
         super(BaseDynamics, self).__init__()
         self.state_dim = state_dim
         self.action_dim = action_dim
@@ -45,3 +36,14 @@ class BaseDynamics(nn.Module):
             torch.Tensor: Time derivative of state [batch_size, state_dim]
         """
         raise NotImplementedError("Derivative method must be implemented by subclass")
+    
+class BaseTransform(nn.Module):
+    def __init__(self):
+        super().__init__()
+        pass
+    
+    def forward(self):
+        pass
+
+    def inverse(self):
+        pass

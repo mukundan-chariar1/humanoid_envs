@@ -106,3 +106,36 @@ def convert_to_x_quat_torch(x_aa: torch.tensor) -> torch.tensor:
 
 def convert_to_x_aa_torch(x_quat: torch.tensor) -> torch.tensor:
     return torch.cat([convert_to_qpos_aa_torch(x_quat[:x_quat.shape[0]//2]), x_quat[x_quat.shape[0]//2:]])
+
+def axis_angle_to_matrix_batched(axis_angle, eps=1e-8):
+    """
+    Custom batched axis-angle to rotation matrix.
+    axis_angle: [..., 3]
+    Returns: [..., 3, 3]
+    """
+    angle = torch.norm(axis_angle, dim=-1, keepdim=True).clamp(min=eps)  # [..., 1]
+    axis = axis_angle / angle  # [..., 3]
+
+    x, y, z = axis.unbind(-1)
+    x, y, z = x[..., None], y[..., None], z[..., None]
+
+    cos = torch.cos(angle)[..., 0]
+    sin = torch.sin(angle)[..., 0]
+    one_minus_cos = 1 - cos
+
+    # Build rotation matrix using Rodrigues' formula
+    R = torch.stack([
+        cos + x * x * one_minus_cos,
+        x * y * one_minus_cos - z * sin,
+        x * z * one_minus_cos + y * sin,
+
+        y * x * one_minus_cos + z * sin,
+        cos + y * y * one_minus_cos,
+        y * z * one_minus_cos - x * sin,
+
+        z * x * one_minus_cos - y * sin,
+        z * y * one_minus_cos + x * sin,
+        cos + z * z * one_minus_cos,
+    ], dim=-1).reshape(*axis_angle.shape[:-1], 3, 3)
+
+    return R

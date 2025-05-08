@@ -216,57 +216,57 @@ def receding_horizon_ilqr(Q, R, Qf, xref, uref, U_init, env, horizon=30, total_s
     return np.array(X), np.array(U_applied)
 
 
-if __name__=='__main__':
-    env = SMPL(num_simulation_step_per_control_step=5)
-    state = env.reset()
-    renderer = Renderer(env)
+# if __name__=='__main__':
+#     env = SMPL(num_simulation_step_per_control_step=5)
+#     state = env.reset()
+#     renderer = Renderer(env)
 
-    nv = env.model.nv
-    nu = env.model.nu
+#     nv = env.model.nv
+#     nu = env.model.nu
 
-    rot, ang, transl_, vel, root_rot, root_ang = get_traj_from_wham(env.dt)
+#     rot, ang, transl_, vel, root_rot, root_ang = get_traj_from_wham(env.dt)
 
-    root_rot = axis_angle_to_quaternion(np.zeros_like(root_rot))
-    rot = np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
-    ang = np.concatenate((np.zeros_like(root_ang), smpl_to_robot(ang)), axis=-1)
+#     root_rot = axis_angle_to_quaternion(np.zeros_like(root_rot))
+#     rot = np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
+#     ang = np.concatenate((np.zeros_like(root_ang), smpl_to_robot(ang)), axis=-1)
 
-    transl_[:, 2]=0
-    transl = transl_ + env.initial_pose[:3]
+#     transl_[:, 2]=0
+#     transl = transl_ + env.initial_pose[:3]
 
-    q_ref = np.concatenate((transl, rot), axis=-1)
-    qd_ref = np.concatenate((vel, ang), axis=-1)
-    xref = np.concatenate([q_ref, qd_ref], axis=-1)[:300]
+#     q_ref = np.concatenate((transl, rot), axis=-1)
+#     qd_ref = np.concatenate((vel, ang), axis=-1)
+#     xref = np.concatenate([q_ref, qd_ref], axis=-1)[:300]
 
-    U = np.ones((xref.shape[0]-1, nu)) * 0.1
-    R = np.eye(nu)
+#     U = np.ones((xref.shape[0]-1, nu)) * 0.1
+#     R = np.eye(nu)
 
-    jac_com = np.zeros((3, nv))
-    # mujoco.mj_jacSubtreeCom(env.model, env.data, jac_com, env.model.body('Head').id)
-    mujoco.mj_jacSubtreeCom(env.model, env.data, jac_com, env.model.body('Torso').id)
-    jac_rfoot = np.zeros((3, nv))
-    mujoco.mj_jacBodyCom(env.model, env.data, jac_rfoot, None, env.model.body('R_Ankle').id)
-    jac_lfoot = np.zeros((3, nv))
-    mujoco.mj_jacBodyCom(env.model, env.data, jac_lfoot, None, env.model.body('L_Ankle').id)
+#     jac_com = np.zeros((3, nv))
+#     # mujoco.mj_jacSubtreeCom(env.model, env.data, jac_com, env.model.body('Head').id)
+#     mujoco.mj_jacSubtreeCom(env.model, env.data, jac_com, env.model.body('Torso').id)
+#     jac_rfoot = np.zeros((3, nv))
+#     mujoco.mj_jacBodyCom(env.model, env.data, jac_rfoot, None, env.model.body('R_Ankle').id)
+#     jac_lfoot = np.zeros((3, nv))
+#     mujoco.mj_jacBodyCom(env.model, env.data, jac_lfoot, None, env.model.body('L_Ankle').id)
 
-    jac_rdiff = jac_com - jac_rfoot
-    jac_ldiff = jac_com - jac_lfoot
-    Qbalance = jac_rdiff.T @ jac_rdiff + jac_ldiff.T @ jac_ldiff
+#     jac_rdiff = jac_com - jac_rfoot
+#     jac_ldiff = jac_com - jac_lfoot
+#     Qbalance = jac_rdiff.T @ jac_rdiff + jac_ldiff.T @ jac_ldiff
 
-    Qbalance=np.block([[Qbalance, np.zeros((nv, nv))],
-                  [np.zeros((nv, 2*nv))]])
+#     Qbalance=np.block([[Qbalance, np.zeros((nv, nv))],
+#                   [np.zeros((nv, 2*nv))]])
 
-    Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
-                  [np.zeros((nv, 2*nv))]])
-    Q[0:3, 0:3] *= 100
-    # Q[3:6, 3:6] *= 0
-    Q[nv:nv+3, nv:nv+3] = 1
-    # Q*=5
-    Q+=Qbalance*1000
-    Qf = Q.copy()
+#     Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
+#                   [np.zeros((nv, 2*nv))]])
+#     Q[0:3, 0:3] *= 100
+#     # Q[3:6, 3:6] *= 0
+#     Q[nv:nv+3, nv:nv+3] = 1
+#     # Q*=5
+#     Q+=Qbalance*1000
+#     Qf = Q.copy()
 
-    X_sol, U_sol = receding_horizon_ilqr(Q, R, Qf, xref, U, U, env, horizon=20, total_steps=len(xref))
+#     X_sol, U_sol = receding_horizon_ilqr(Q, R, Qf, xref, U, U, env, horizon=20, total_steps=len(xref))
 
-    renderer.render_env(act=np.array(U_sol), qpos=q_ref[0], qvel=qd_ref[0])
+#     renderer.render_env(act=np.array(U_sol), qpos=q_ref[0], qvel=qd_ref[0])
 
 
 # if __name__ == '__main__':
@@ -309,38 +309,40 @@ if __name__=='__main__':
 
 #     renderer.render_env(act=np.array(act), qpos=q_ref[0], qvel=qd_ref[0])
 
-# if __name__=='__main__':
-#     env = SMPL(num_simulation_step_per_control_step=5)
-#     state = env.reset()
-#     env_renderer=Renderer(env)
+if __name__=='__main__':
+    env = SMPL(num_simulation_step_per_control_step=5)
+    state = env.reset()
+    env_renderer=Renderer(env)
 
-#     nv=env.model.nv
-#     nu = env.model.nu
+    nv=env.model.nv
+    nu = env.model.nu
 
-#     rot, ang, transl_, vel=get_traj_from_wham(env.dt)
+    rot, ang, transl_, vel, root_rot, root_ang = get_traj_from_wham(env.dt)
 
-#     root_rot=axis_angle_to_quaternion(np.zeros((rot.shape[0], 3)))
-#     rot=np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
-#     ang=np.concatenate((np.zeros((root_rot.shape[0], 3)), smpl_to_robot(ang)), axis=-1)
-#     transl=transl_+env.initial_pose[:3]
+    root_rot = axis_angle_to_quaternion(np.zeros_like(root_rot))
+    rot = np.concatenate((root_rot, smpl_to_robot(rot)), axis=-1)
+    ang = np.concatenate((np.zeros_like(root_ang), smpl_to_robot(ang)), axis=-1)
 
-#     q_ref=np.concatenate((transl, rot), axis=-1)[:30]
-#     qd_ref=np.concatenate((vel, ang), axis=-1)[:30]
+    transl_[:, 2]=0
+    transl = transl_ + env.initial_pose[:3]
 
-#     xref=np.concatenate([q_ref, qd_ref], axis=-1)
+    q_ref = np.concatenate((transl, rot), axis=-1)
+    qd_ref = np.concatenate((vel, ang), axis=-1)
+    xref = np.concatenate([q_ref, qd_ref], axis=-1)[:300]
 
-#     U=np.ones((xref.shape[0]-1, nu))*0.1
 
-#     R = np.eye(nu)*1e-6
-#     Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
-#               [np.zeros((nv, 2*nv))]])
-#     # Q=np.eye(nv*2)
-#     # Q*=0.01
-#     Q[3:6, 3:6]*=0
-#     Q[nv:nv+3, nv:nv+3]=1
-#     Qf=Q.copy()*10
+    U=np.ones((xref.shape[0]-1, nu))*0.1
 
-#     X, U, K=iLQR(Q, R, Qf, xref, U, U, env, atol=1e1)
+    R = np.eye(nu)*1e-6
+    Q = np.block([[np.eye(nv, nv), np.zeros((nv, nv))],
+              [np.zeros((nv, 2*nv))]])
+    # Q=np.eye(nv*2)
+    # Q*=0.01
+    Q[3:6, 3:6]*=0
+    Q[nv:nv+3, nv:nv+3]=1
+    Qf=Q.copy()*10
 
-#     env_renderer.render_env(act=U, qpos=q_ref[0], qvel=qd_ref[0])
+    X, U, K=iLQR(Q, R, Qf, xref, U, U, env, atol=1e1)
+
+    env_renderer.render_env(act=U, qpos=q_ref[0], qvel=qd_ref[0])
 
